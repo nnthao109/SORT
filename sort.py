@@ -32,7 +32,7 @@ from filterpy.kalman import KalmanFilter
 
 np.random.seed(0)
 
-
+# Hungarian algorithms
 def linear_assignment(cost_matrix):
   try:
     import lap
@@ -112,17 +112,18 @@ class KalmanBoxTracker(object):
     self.kf.Q[4:,4:] *= 0.01
 
     self.kf.x[:4] = convert_bbox_to_z(bbox)
-    self.time_since_update = 0
+    self.time_since_update = 0 #Time from the last successfull update
     self.id = KalmanBoxTracker.count
     KalmanBoxTracker.count += 1
     self.history = []
-    self.hits = 0
-    self.hit_streak = 0
-    self.age = 0
+    self.hits = 0 # numbers of successfull update
+    self.hit_streak = 0 # numbers of sequence hits (num of miss > threshold -> delete)
+    self.age = 0 
 
   def update(self,bbox):
     """
     Updates the state vector with observed bbox.
+    Maching 
     """
     self.time_since_update = 0
     self.history = []
@@ -134,14 +135,14 @@ class KalmanBoxTracker(object):
     """
     Advances the state vector and returns the predicted bounding box estimate.
     """
-    if((self.kf.x[6]+self.kf.x[2])<=0):
-      self.kf.x[6] *= 0.0
-    self.kf.predict()
-    self.age += 1
+    if((self.kf.x[6]+self.kf.x[2])<=0): #ensures that the predicted bounding box does not have negative width.
+      self.kf.x[6] *= 0.0 #set v = 0
+    self.kf.predict() 
+    self.age += 1 # The numbers of predict since the last update (if age > max_age -> delete (Predict unmatched))
     if(self.time_since_update>0):
       self.hit_streak = 0
     self.time_since_update += 1
-    self.history.append(convert_x_to_bbox(self.kf.x))
+    self.history.append(convert_x_to_bbox(self.kf.x)) # save predict version in history 
     return self.history[-1]
 
   def get_state(self):
